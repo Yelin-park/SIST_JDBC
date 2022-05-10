@@ -1,83 +1,86 @@
-package days05;
+package days04;
+
+import java.sql.Connection;
+
+import com.util.DBconn;
+
+import days04.board.BoardController;
+import days04.board.BoardDAO;
+import days04.board.BoardDAOImpl;
+import days04.board.BoardService;
 
 /**
  * @author yelin
- * @date 2022-05-10 10:40:41
- * @subject 페이징 처리
+ * @date 2022-05-09 09:44:20
+ * @subject
  * @content
- * 			1. 목록보기 페이징 처리
- * 			2. 검색된 결과 페이징 처리
+ * 		
+	 	모델2방식의 [MVC 패턴]으로 개발
+	 	
+		1. tbl_cstvsboard 게시판 테이블 생성
+		
+		2. days04.board.BoardDTO 생성
+		
+		3. days04.board.BoardDAO 인터페이스 선언
+			- DAO(Data Access Object) -> CRUD 객체
+				Access -> CRUD 작업
+				데이터를 처리할 수 있는 편리성, 보안성 때문에 DAO 사용
+				
+		4. days04.board.BoardDAOImpl (위에 있는 인터페이스를 구현한 클래스)
+		
+		5. BoardDAOImpl.select() / insert() 메서드 구현
+			-> DAO 객체의 select() / insert() 메서드 [단위 테스트]
+				- 단위 테스트 : 잘 작동하는지 테스트하는 것
+				- days04.board.test 패키지 추가
+				- BoardDAOImplTest 생성 - JUnit Test Case로 생성함
+		
+		6. days04.board.BoardService 클래스 추가
+			- DAO 객체를 호출하는 BoardService 클래스 구현
+			
+			* BoardService 클래스는 왜 구현할까?
+			   목록페이지에서 한 개의 게시글을 보기 위해서 제목을 클릭하면
+			   클릭한 [게시글의 상세보기]
+			   상세보기를하면 아래 두 개의 작업이 하나로 묶여서 실행되어야함
+			   하나의 작업이 실행되지 않았으면 다시 원상태로 복구해야함
+			   (트랜잭션 처리)
+			   1) 클릭한 게시글의 조회수 증가하는 작업
+			   2) 클릭한 게시글의 정보 SELECT해와서 출력하는 작업
+		
+		7. days04.board.test.BoardServiceTest 추가 - JUnit Test Case로 생성함
+		
+		8. BoardController 생성	모든 요청 -> 처리 -> 응답
+						   		메뉴선택 -> 처리 -> boardService -> boardDAO -> 콘솔 출력
+						   		위와 같은 작업을 중앙에서 제어를 해주는 클래스
+						   		
+			[게시글 목록]
+			      글쓰기 버튼 클릭 -> 새 글 입력 창
+									  [저장]
+			
+			[게시글 상세 보기]
+			[게시글 목록]에서 보고자 하는 게시글 제목 클릭하면 -> 글번호를 가져와서 -> 해당 글번호의 상세 게시글 정보 출력
+												ㄴ 여기에서는 클릭을 못하니 입력받아서 처리!
+			게시글 상세 보기를 하게 되면.. 아래와 같은 작업도 필요
+			글번호의 조회수(readed) 컬럼을 1증가 
+			글번호의 게시글 정보를 BoardDTO에 담아서 반환하는 메서드 필요
+			[게시글 수정]		// [게시글 삭제]
+		
+		 9. 삭제
+		 	1) 삭제할 게시글 번호를 입력? 2
+		 	
+		 10. 수정
+
  */
 public class Ex01 {
 
 	public static void main(String[] args) {
-		// 1. 페이지에 출력할 게시글 수를 저장하는 변수 선언
-		int numberPerPage = 15;
-		// 2. 현재 페이지 : 아무 값도 없으면 1번 페이지
-		int currentPage = 1;
-		// 3. 총 레코드수 : 347 개
-		int totalRecords = 347;
-		// 4. 총 페이지 수 : 24 페이지
-		// JAVA 처리시 : int totalPages = (int) Math.ceil((double) totalRecords / numberPerPage);
-		int totalPages = 24;
-		// 5. 페이징블럭수 : 1 2 3 4 5 6 7 8 9 10
-		int numberOfPageBlock = 10;
-		// 6. 페이징블럭의 시작값
-		int startOfPageBlock = 1;
-		int endOfPageBlock;
 		
-		// *****
-		for (int i = 1; i <= totalPages; i++) {
-			startOfPageBlock = (i-1) / numberOfPageBlock * numberOfPageBlock + 1;
-			endOfPageBlock = startOfPageBlock + numberOfPageBlock - 1;
-			if(endOfPageBlock > totalPages) endOfPageBlock = totalPages;
-			
-			// System.out.printf("현재 페이지 : %d\t%d ~ %d\n", i, startOfPageBlock, endOfPageBlock);
-			System.out.printf("현재 페이지 : %d\t", i);
-			
-			if (startOfPageBlock != 1) System.out.print(" < ");
-			
-			for (int j = startOfPageBlock; j <= endOfPageBlock; j++) {
-				System.out.printf(j==i ? "[%d] " : "%d ", j);
-			} // for j
-			
-			if (endOfPageBlock != totalPages) System.out.print(" > ");
-			
-			System.out.println();
-		} // for i
+		Connection conn = DBconn.getConnection();
+		BoardDAO dao = new BoardDAOImpl(conn);
+		BoardService service = new BoardService(dao);
+		BoardController controller = new BoardController(service);
 		
-		// ============================================
-		// 검색된 결과도 페이징 처리 추가
-		// writer = '김검색' -> 39개 검색되어짐 -> 15개씩 1페이지에 [1] 2 3
+		controller.start();
 		
 	} // main
 
 } // class
-
-/*
-				< prev버튼  페이징블럭시작값       	페이징블럭종료값 	next버튼 >
-현재 페이지 : 1				[1] 2 3 4 5 6 7 8 9 10 >
-현재 페이지 : 2				1 [2] 3 4 5 6 7 8 9 10 >
-현재 페이지 : 3				1 2 [3] 4 5 6 7 8 9 10 >
-현재 페이지 : 4				1 2 3 [4] 5 6 7 8 9 10 >
-현재 페이지 : 5					:
-현재 페이지 : 6					:
-현재 페이지 : 7					:
-현재 페이지 : 8					:
-현재 페이지 : 9					:
-현재 페이지 : 10				1 2 3 4 5 6 7 8 9 [10] >
-현재 페이지 : 11				< [11] 12 13 14 15 16 17 18 19 20 >
-현재 페이지 : 12				< 11 [12] 13 14 15 16 17 18 19 20 >
-현재 페이지 : 13					:
-현재 페이지 : 14					:
-현재 페이지 : 15					:
-현재 페이지 : 16					:
-현재 페이지 : 17					:
-현재 페이지 : 18					:
-현재 페이지 : 19					:
-현재 페이지 : 20				< 11 12 13 14 15 16 17 18 19 [20] >
-현재 페이지 : 21				< [21] 22 23 24 
-현재 페이지 : 22				< 21 [22] 23 24 
-현재 페이지 : 23				< 21 22 [23] 24 
-현재 페이지 : 24				< 21 22 23 [24] 
-*/
